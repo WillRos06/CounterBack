@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador Regresivo (Hasta 1000 horas)</title>
+    <style>
+        #countdown {
+            font-size: 2em;
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            font-size: 1em;
+            padding: 10px 20px;
+            margin: 10px;
+        }
+        input {
+            font-size: 1em;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="startTime">Hora de inicio (HH:MM:SS): </label>
+        <input type="text" id="startTime" placeholder="Ej: 14:30:00">
+        <button id="setTimeBtn">Establecer Hora</button>
+    </div>
+    <div id="countdown">00:00:00</div>
+    <button id="startPauseBtn">Iniciar/Pausar</button>
+    <button id="resetBtn">Reiniciar</button>
+
+    <script>
+        let countdown;
+        let timeLeft = localStorage.getItem('timeLeft') ? parseInt(localStorage.getItem('timeLeft')) : 0;
+        let isPaused = localStorage.getItem('isPaused') === 'true';
+        let targetTime = localStorage.getItem('targetTime') ? parseInt(localStorage.getItem('targetTime')) : null;
+
+        const countdownElement = document.getElementById("countdown");
+        const startPauseBtn = document.getElementById("startPauseBtn");
+        const resetBtn = document.getElementById("resetBtn");
+        const startTimeInput = document.getElementById("startTime");
+        const setTimeBtn = document.getElementById("setTimeBtn");
+
+        function updateCountdown() {
+            if (isPaused || !targetTime) return;
+
+            const now = Math.floor(Date.now() / 1000); // Tiempo actual en segundos
+            timeLeft = targetTime - now;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                countdownElement.textContent = "¡Tiempo terminado!";
+                localStorage.removeItem('timeLeft');
+                localStorage.removeItem('targetTime');
+                return;
+            }
+
+            const hours = Math.floor(timeLeft / 3600);
+            const minutes = Math.floor((timeLeft % 3600) / 60);
+            const seconds = timeLeft % 60;
+
+            countdownElement.textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            localStorage.setItem('timeLeft', timeLeft);
+        }
+
+        function startCountdown() {
+            if (!targetTime) {
+                alert("Por favor, establece una hora de inicio primero.");
+                return;
+            }
+            isPaused = false;
+            localStorage.setItem('isPaused', isPaused);
+            if (!countdown) {
+                countdown = setInterval(updateCountdown, 1000);
+            }
+        }
+
+        function pauseCountdown() {
+            isPaused = true;
+            localStorage.setItem('isPaused', isPaused);
+        }
+
+        function resetCountdown() {
+            if (confirm("¿Estás seguro de que deseas reiniciar el contador?")) {
+                clearInterval(countdown);
+                countdown = null;
+                timeLeft = 0;
+                targetTime = null;
+                isPaused = true;
+                localStorage.removeItem('timeLeft');
+                localStorage.removeItem('targetTime');
+                localStorage.setItem('isPaused', isPaused);
+                countdownElement.textContent = "00:00:00";
+            }
+        }
+
+        setTimeBtn.addEventListener('click', () => {
+            const timeString = startTimeInput.value;
+            const [hours, minutes, seconds] = timeString.split(":").map(Number);
+
+            if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+                alert("Formato de hora inválido. Usa HH:MM:SS.");
+                return;
+            }
+
+            if (hours < 0 || hours > 1000 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+                alert("Hora inválida. Asegúrate de que las horas estén entre 0 y 1000, y los minutos/segundos entre 0 y 59.");
+                return;
+            }
+
+            const now = new Date();
+            const target = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate(),
+                now.getHours() + hours,
+                now.getMinutes() + minutes,
+                now.getSeconds() + seconds
+            );
+
+            targetTime = Math.floor(target.getTime() / 1000); // Convertir a segundos
+            localStorage.setItem('targetTime', targetTime);
+            startCountdown();
+        });
+
+        startPauseBtn.addEventListener('click', () => {
+            if (isPaused) {
+                startCountdown();
+            } else {
+                pauseCountdown();
+            }
+            startPauseBtn.textContent = isPaused ? "Iniciar" : "Pausar";
+        });
+
+        resetBtn.addEventListener('click', resetCountdown);
+
+        // Iniciar el contador si no está pausado y hay un tiempo objetivo
+        if (targetTime && !isPaused) {
+            countdown = setInterval(updateCountdown, 1000);
+        } else if (targetTime) {
+            updateCountdown(); // Mostrar el tiempo restante aunque esté pausado
+        }
+    </script>
+</body>
+</html>
